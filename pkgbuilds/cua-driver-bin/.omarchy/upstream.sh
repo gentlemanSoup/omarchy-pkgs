@@ -9,7 +9,28 @@ set -euo pipefail
 REPO="trycua/cua"
 TAG_PREFIX="cua-driver-rs-v"
 
-releases=$(curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=100")
+# Publication order is not version order: older pages can contain a newer
+# driver version than a recently rebuilt release. Exhaust the feed before
+# selecting, and fail closed if the bounded scan cannot reach its end.
+releases='[]'
+max_pages=100
+for ((page = 1; page <= max_pages; page++)); do
+  release_page=$(curl --connect-timeout 10 --max-time 30 -fsSL \
+    "https://api.github.com/repos/$REPO/releases?per_page=100&page=$page")
+  if ! page_size=$(jq -er 'if type == "array" and length <= 100 then length else error("expected release page of at most 100 entries") end' <<<"$release_page"); then
+    echo "invalid release feed for $REPO on page $page" >&2
+    exit 1
+  fi
+  releases=$(jq -c --argjson page "$release_page" '. + $page' <<<"$releases")
+  (( page_size == 100 )) || break
+done
+if (( page > max_pages )); then
+  echo "release feed for $REPO exceeds $max_pages pages; refusing incomplete selection" >&2
+  exit 1
+fi
+
+# Keep jq failures in the main shell, where errexit can reject malformed data.
+release_rows=$(jq -r '.[] | select(.draft | not) | [.tag_name // "", .published_at // ""] | @tsv' <<<"$releases")
 
 min_age="${MIN_RELEASE_AGE_SECONDS:-0}"
 now=$(date +%s)
@@ -48,9 +69,9 @@ while IFS=$'\t' read -r tag published_at; do
     best_tag=$tag
     best_published=$published_at
   fi
-done < <(jq -r '.[] | select(.draft | not) | [.tag_name // "", .published_at // ""] | @tsv' <<<"$releases")
+done <<<"$release_rows"
 
-# A feed page with no stable driver release at all is an anomaly worth a loud
+# A feed with no stable driver release at all is an anomaly worth a loud
 # error; every candidate merely being inside the quarantine window is not.
 if (( candidates == 0 )); then
   echo "no stable $TAG_PREFIX releases in the feed for $REPO" >&2
