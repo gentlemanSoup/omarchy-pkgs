@@ -21,7 +21,7 @@ for ((page = 1; page <= max_pages; page++)); do
     echo "invalid release feed for $REPO on page $page" >&2
     exit 1
   fi
-  releases=$(jq -c --argjson page "$release_page" '. + $page' <<<"$releases")
+  releases=$(printf '%s\n' "$releases" "$release_page" | jq -cs 'add')
   (( page_size == 100 )) || break
 done
 if (( page > max_pages )); then

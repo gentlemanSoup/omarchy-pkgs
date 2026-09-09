@@ -2,7 +2,11 @@
 # Offline hook fixtures, also run by bin/sync-upstream self-test. Requires
 # GNU date, jq, and pacman's vercmp, like the repository's other self-tests.
 set -euo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
+hook="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/upstream.sh"
+fixture_dir=$(mktemp -d)
+trap 'rm -rf "$fixture_dir"' EXIT
+printf 'pkgver=0.23.2\n' > "$fixture_dir/PKGBUILD"
+cd "$fixture_dir"
 
 failures=0
 check() {
@@ -29,7 +33,11 @@ curl() {
       local page="${url##*=}"
       [[ "$page" != "${FAIL_PAGE:-}" ]] || { echo 'fixture API failure' >&2; return 22; }
       if [[ "${ENDLESS:-}" == 1 || "$page" == 1 ]]; then
-        printf '%s\n' "$PAGE1"
+        if [[ "${LARGE_PAGE:-}" == 1 ]]; then
+          jq -c '.[0].body = ("x" * 131072)' <<<"$PAGE1"
+        else
+          printf '%s\n' "$PAGE1"
+        fi
       elif [[ "$page" == 2 ]]; then
         printf '%s\n' "$PAGE2"
       else
@@ -44,10 +52,10 @@ curl() {
   esac
 }
 export -f curl date
-export PAGE1 PAGE2 CHECKSUMS FAIL_PAGE FAIL_CHECKSUMS ENDLESS
+export PAGE1 PAGE2 CHECKSUMS FAIL_PAGE FAIL_CHECKSUMS ENDLESS LARGE_PAGE
 export MIN_RELEASE_AGE_SECONDS=86400
 export BYPASS_MIN_RELEASE_AGE=''
-FAIL_PAGE='' FAIL_CHECKSUMS='' ENDLESS=''
+FAIL_PAGE='' FAIL_CHECKSUMS='' ENDLESS='' LARGE_PAGE=''
 PAGE2='[]'
 
 release() {
@@ -56,7 +64,7 @@ release() {
 }
 run_hook() {
   status=0
-  out=$(bash .omarchy/upstream.sh 2>&1) || status=$?
+  out=$(bash "$hook" 2>&1) || status=$?
 }
 expect_failure() {
   run_hook
@@ -80,6 +88,12 @@ check 'stable-shaped prerelease accepted at exactly 24h' 0.24.0 "$(jq -r '.pkgve
 check 'x86_64 checksum' "$sum_x" "$(jq -r '.sha256sums.x86_64[0]' <<<"$out")"
 check 'ARM checksum' "$sum_a" "$(jq -r '.sha256sums.aarch64[0]' <<<"$out")"
 check 'publication date preserved' 2026-09-07T16:51:50Z "$(jq -r '.published_at' <<<"$out")"
+
+LARGE_PAGE=1
+run_hook
+check 'release page larger than the argument limit succeeds' 0 "$status"
+check 'large release page preserves version selection' 0.24.0 "$(jq -r '.pkgver' <<<"$out")"
+LARGE_PAGE=''
 
 # An eligible lower version on page one must not terminate the scan.
 rebuilt=$(release cua-driver-rs-v0.23.3 2026-09-07T16:51:50Z)
