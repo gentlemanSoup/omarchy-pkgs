@@ -34,11 +34,16 @@ depends=(
 
 optdepends=(
   'gnome-keyring: store credentials in a system keyring'
-  'edk2-ovmf: UEFI firmware for the Cowork virtual machine'
+  'bubblewrap: Claude Code sandboxing'
+  'socat: Claude Code sandboxing'
   'virtiofsd: file sharing with the Cowork virtual machine'
 )
-optdepends_x86_64=('qemu-system-x86: run Cowork tasks in a local virtual machine')
-optdepends_aarch64=('qemu-system-aarch64: run Cowork tasks in a local virtual machine')
+optdepends_x86_64=(
+  'qemu-system-x86: run Cowork tasks in a local virtual machine'
+  'edk2-ovmf: UEFI firmware for the Cowork virtual machine'
+)
+# No Cowork optdepends on aarch64: Arch Linux ARM ships no UEFI firmware
+# package, so the app's /usr/share/AAVMF probe has nothing to resolve to.
 
 makedepends=('libarchive')
 options=('!debug' '!strip')
@@ -77,6 +82,17 @@ package() {
 
   install -Dm644 "${pkgdir}/usr/share/doc/claude-desktop/copyright" \
     "${pkgdir}/usr/share/licenses/${pkgname}/copyright"
+
+  # Cowork probes Debian's paths for its VM stack; map them onto Arch's.
+  # The links dangle harmlessly until the matching optdepends are installed.
+  install -d "${pkgdir}/usr/libexec"
+  ln -s ../lib/virtiofsd "${pkgdir}/usr/libexec/virtiofsd"
+  if [[ "${CARCH}" == x86_64 ]]; then
+    # The app derives the VARS path from the CODE path, so both need a link.
+    install -d "${pkgdir}/usr/share/edk2"
+    ln -s x64/OVMF_CODE.4m.fd "${pkgdir}/usr/share/edk2/OVMF_CODE_4M.fd"
+    ln -s x64/OVMF_VARS.4m.fd "${pkgdir}/usr/share/edk2/OVMF_VARS_4M.fd"
+  fi
 
   # Debian package-policy files are not used on Arch Linux.
   rm -rf "${pkgdir}/usr/share/doc" "${pkgdir}/usr/share/lintian"
