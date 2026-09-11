@@ -74,7 +74,18 @@ check() {
   STRATA_BUILD_COMMIT=$(<.build-commit)
   export STRATA_RELEASE_TAG="v$pkgver"
   export STRATA_BUILD_KIND=stable
-  cargo test --frozen --release --all-targets --all-features
+  # Search fixtures depend on directory enumeration order and fail on overlayfs.
+  # Run them on tmpfs; other suites execute fixtures, so cannot use noexec /dev/shm.
+  local search_tmp
+  search_tmp=$(mktemp -d /dev/shm/strata-tests.XXXXXXXX) || return 1
+  local test_status=0
+  TMPDIR="$search_tmp" cargo test --frozen --release --all-targets --all-features \
+    services::search::tests:: -- --test-threads=1 || test_status=$?
+  rm -rf -- "$search_tmp"
+  (( test_status == 0 )) || return "$test_status"
+
+  cargo test --frozen --release --all-targets --all-features \
+    -- --test-threads=1 --skip services::search::tests::
 }
 
 package() {
