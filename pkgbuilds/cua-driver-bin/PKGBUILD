@@ -18,7 +18,7 @@
 # a stand-in that declines and names pacman instead.
 
 pkgname=cua-driver-bin
-pkgver=0.24.0
+pkgver=0.25.0
 pkgrel=1
 pkgdesc="Computer-use driver for native GUI apps: accessibility-tree snapshots and input injection"
 arch=('x86_64' 'aarch64')
@@ -46,8 +46,8 @@ source_x86_64=("https://github.com/trycua/cua/releases/download/cua-driver-rs-v$
 source_aarch64=("https://github.com/trycua/cua/releases/download/cua-driver-rs-v${pkgver}/cua-driver-rs-${pkgver}-linux-arm64.tar.gz")
 sha256sums=('c0779290c1d4783169aa3dbfb55feb505e563ef8a004bbf55298ceffcfbda8d9'
             'c76e251c3ed424200eac52bec35ba534336307fabd83a175ab0b47e2084ab0d8')
-sha256sums_x86_64=('e313e4072bde730f16466b90388c7602954ff25714bf73f701d7218eeb7747d2')
-sha256sums_aarch64=('6d7969715e6be6e1d635fc0017040825d132142c8503130b1ce08fb6ee71c8c9')
+sha256sums_x86_64=('06720cf1caa11876b795b6ade257c15be368738c1bc864b461d19994e87aa02c')
+sha256sums_aarch64=('3019614c3c58ff3a591b78149cda0bdd200b0ea076b9465b53512c9f00dd2c60')
 
 case "${CARCH}" in
   x86_64) _platform="linux-x86_64" ;;
