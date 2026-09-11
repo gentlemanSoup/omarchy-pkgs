@@ -1,10 +1,10 @@
 pkgname=strata
-pkgver=0.14.0
+pkgver=0.15.0
 pkgrel=1
 pkgdesc='Fast, keyboard-first file manager for modern Linux desktops'
 arch=('x86_64' 'aarch64')
 url='https://github.com/lgse/strata'
-license=('GPL-3.0-or-later')
+license=('MIT')
 
 depends=(
   'bash'
@@ -20,6 +20,7 @@ depends=(
   'graphene'
   'gst-libav'
   'gst-plugins-good'
+  'gvfs'
   'gtk4'
   'gtksourceview5'
   'hicolor-icon-theme'
@@ -38,7 +39,7 @@ conflicts=('strata-git')
 options=('!debug' '!lto')
 
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('4a1de75c6a28151e44fa841534e0ef16d191215d40ee45a1ce22be5e73c8827d')
+sha256sums=('be4d579a9378b8bf9ccc3904e7327ce756bed61d1e617c75b543e1e539611f0a')
 
 prepare() {
   cd "$pkgname-$pkgver"
