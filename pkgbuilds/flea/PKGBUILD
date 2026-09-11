@@ -1,7 +1,7 @@
 # Maintainer: GM <gianmarcomorales@icloud.com>
 
 pkgname=flea
-pkgver=0.1.6
+pkgver=0.2.0
 pkgrel=1
 pkgdesc='Fast, keyboard-first file manager for Omarchy'
 arch=('x86_64' 'aarch64')
@@ -19,6 +19,8 @@ depends=(
   'gvfs-nfs'
   'gvfs-smb'
   'hicolor-icon-theme'
+  'kimageformats'
+  'libheif'
   'omarchy'
   'python'
   'python-gobject'
@@ -46,7 +48,7 @@ options=('!debug')
 source=(
   "$url/releases/download/v$pkgver/$pkgname-v$pkgver.tar.gz"
 )
-sha256sums=('d4d579c199f65d61b181f65ef750030fcf421e9d8827a748d53c7cab858548d0')
+sha256sums=('e4f260bea1c743af27dccbf3e6a486cedd3da10120a0f96e420592cafc973f9d')
 
 build() {
   cd "$pkgname-$pkgver"
@@ -69,6 +71,8 @@ check() {
     --proc /proc --dev /dev --tmpfs /tmp /usr/bin/true >/dev/null 2>&1; then
     printf 'Skipping sandbox integration tests: this builder cannot create an unprivileged namespace\n'
     test_args+=(
+      --skip backend::archiveops::tests::a_silent_failure_names_the_operation_that_was_running
+      --skip tui::job::tests::preview_worker_reads_held_source_in_readonly_sandbox
       --skip backend::archiveops::tests::a_tool_that_exits_zero_writing_nothing_is_caught_by_the_predicate
       --skip backend::archiveops::tests::an_empty_archive_extracts_to_an_empty_directory_and_that_is_success
       --skip backend::archiveops::tests::only_the_archive_root_extracts_to_nothing_while_nested_directories_do_not
@@ -90,7 +94,8 @@ check() {
     )
   fi
 
-  cargo test --frozen --release -- "${test_args[@]}"
+  # Recovery-lock tests are unreliable when run concurrently with other suites.
+  cargo test --frozen --release -- --test-threads=1 "${test_args[@]}"
   ./tests/js.sh
   ./tests/keymap-gen.sh
 }
