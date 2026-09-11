@@ -71,6 +71,8 @@ check() {
     --proc /proc --dev /dev --tmpfs /tmp /usr/bin/true >/dev/null 2>&1; then
     printf 'Skipping sandbox integration tests: this builder cannot create an unprivileged namespace\n'
     test_args+=(
+      --skip backend::archiveops::tests::a_silent_failure_names_the_operation_that_was_running
+      --skip tui::job::tests::preview_worker_reads_held_source_in_readonly_sandbox
       --skip backend::archiveops::tests::a_tool_that_exits_zero_writing_nothing_is_caught_by_the_predicate
       --skip backend::archiveops::tests::an_empty_archive_extracts_to_an_empty_directory_and_that_is_success
       --skip backend::archiveops::tests::only_the_archive_root_extracts_to_nothing_while_nested_directories_do_not
@@ -92,7 +94,8 @@ check() {
     )
   fi
 
-  cargo test --frozen --release -- "${test_args[@]}"
+  # Recovery-lock tests are unreliable when run concurrently with other suites.
+  cargo test --frozen --release -- --test-threads=1 "${test_args[@]}"
   ./tests/js.sh
   ./tests/keymap-gen.sh
 }
