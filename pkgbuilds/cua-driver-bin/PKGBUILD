@@ -11,14 +11,14 @@
 # The binary carries its own updater: `cua-driver update --apply` pipes the
 # vendor installer into bash, which would install a second copy under
 # ~/.cua-driver and link it into ~/.local/bin, stepping around pacman and
-# this repository's release gate. Upstream offers no switch for that path,
-# and a /usr/bin wrapper would not cover it either, since the MCP
-# configurations the binary generates record the resolved executable. So
-# prepare() rewrites the installer URL inside the binary to point at pm.sh,
-# a stand-in that declines and names pacman instead.
+# this repository's release gate. Driver 0.27.0 detects pacman ownership, but
+# deliberately treats failed and timed-out ownership queries as unmanaged.
+# A /usr/bin wrapper would not cover MCP configurations that record the
+# resolved executable, so prepare() rewrites the installer URL inside the
+# binary to point at pm.sh, a stand-in that declines and names pacman instead.
 
 pkgname=cua-driver-bin
-pkgver=0.26.1
+pkgver=0.27.0
 pkgrel=1
 pkgdesc="Computer-use driver for native GUI apps: accessibility-tree snapshots and input injection"
 arch=('x86_64' 'aarch64')
@@ -46,8 +46,8 @@ source_x86_64=("https://github.com/trycua/cua/releases/download/cua-driver-rs-v$
 source_aarch64=("https://github.com/trycua/cua/releases/download/cua-driver-rs-v${pkgver}/cua-driver-rs-${pkgver}-linux-arm64.tar.gz")
 sha256sums=('c0779290c1d4783169aa3dbfb55feb505e563ef8a004bbf55298ceffcfbda8d9'
             'c76e251c3ed424200eac52bec35ba534336307fabd83a175ab0b47e2084ab0d8')
-sha256sums_x86_64=('a38e2a812b2c04b6e5dac2cf7e534b04ff9a5a6711b1d13db657ac0166387d7a')
-sha256sums_aarch64=('c418dd4573174d6c3bc36a643d64c013c3abceb399033fc7ed0ecb2c3384cae2')
+sha256sums_x86_64=('331af6773b44ee781e8d6ca0e47a35aee741355bb423dfe2bd4f4acd5b697677')
+sha256sums_aarch64=('2d973a8d82714cc7a80b99d107bfc68abb6bf0a81e98ff225cc85b0acfebefb3')
 
 case "${CARCH}" in
   x86_64) _platform="linux-x86_64" ;;
