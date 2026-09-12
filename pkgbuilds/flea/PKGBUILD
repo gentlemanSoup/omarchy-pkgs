@@ -2,7 +2,7 @@
 
 pkgname=flea
 pkgver=0.2.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Fast, keyboard-first file manager for Omarchy'
 arch=('x86_64' 'aarch64')
 url='https://github.com/thisisgm/flea'
@@ -95,6 +95,26 @@ check() {
   fi
 
   # Recovery-lock tests are unreliable when run concurrently with other suites.
+  # These fixtures require O_TMPFILE and fine-grained file timestamps, which
+  # the builder's /tmp filesystem may not provide. Keep executable fixtures
+  # in the remaining suites on the normal temp root (/dev/shm is noexec).
+  local -a filesystem_tests=(
+    backend::menu_actions::tests::
+    backend::menudelete::tests::
+    backend::redo::tests::
+    backend::trashbrowse::tests::
+    backend::trashdelete::
+    backend::trashmanifest::tests::
+  )
+  local test_tmp test_status=0 suite
+  test_tmp=$(mktemp -d /dev/shm/flea-tests.XXXXXXXX) || return 1
+  TMPDIR="$test_tmp" cargo test --frozen --release -- \
+    --test-threads=1 "${filesystem_tests[@]}" || test_status=$?
+  rm -rf -- "$test_tmp"
+  (( test_status == 0 )) || return "$test_status"
+  for suite in "${filesystem_tests[@]}"; do
+    test_args+=(--skip "$suite")
+  done
   cargo test --frozen --release -- --test-threads=1 "${test_args[@]}"
   ./tests/js.sh
   ./tests/keymap-gen.sh
